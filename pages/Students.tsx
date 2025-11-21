@@ -1,30 +1,32 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchStudents, createStudent } from '../services/studentService';
-import { DAYS_OF_WEEK, Student, CreateStudentDTO, DayOfWeek } from '../types';
+import { DAYS_OF_WEEK, CreateStudentDTO } from '../types';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, X, User, Filter, Check } from 'lucide-react';
+import { Search, Plus, User, Filter } from 'lucide-react';
 import { Spinner } from '../components/Spinner';
+import StudentForm from '../components/StudentForm';
+import { useAppContext } from '../contexts/AppContext';
+
+const formatTime = (time: string) => {
+  if (!time) return '';
+  const [hours, minutes] = time.split(':');
+  const h = parseInt(hours, 10);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${minutes} ${ampm}`;
+};
 
 const Students: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { t } = useAppContext();
   
   // UI State
   const [searchQuery, setSearchQuery] = useState('');
   const [activeDayFilter, setActiveDayFilter] = useState<string | null>(null);
   const [minRateFilter, setMinRateFilter] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Form State
-  const [formData, setFormData] = useState<CreateStudentDTO>({
-    name: '',
-    hourly_rate: 0,
-    days_of_week: [],
-    start_time: '',
-    end_time: '',
-  });
 
   const { data: students, isLoading, isError } = useQuery({
     queryKey: ['students'],
@@ -36,7 +38,6 @@ const Students: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
       setIsModalOpen(false);
-      setFormData({ name: '', hourly_rate: 0, days_of_week: [], start_time: '', end_time: '' });
     },
   });
 
@@ -48,33 +49,15 @@ const Students: React.FC = () => {
     return matchesName && matchesDay && matchesRate;
   }) || [];
 
-  const toggleDaySelection = (day: string) => {
-    setFormData(prev => {
-      const exists = prev.days_of_week.includes(day);
-      return {
-        ...prev,
-        days_of_week: exists 
-          ? prev.days_of_week.filter(d => d !== day)
-          : [...prev.days_of_week, day]
-      };
-    });
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name) return;
-    createMutation.mutate(formData);
-  };
-
   if (isLoading) return <div className="pt-12"><Spinner /></div>;
-  if (isError) return <div className="p-6 text-center text-red-500">Error loading students.</div>;
+  if (isError) return <div className="p-6 text-center text-red-500">{t('errorLoading')}</div>;
 
   return (
-    <div className="min-h-full bg-gray-50 pb-24 relative">
+    <div className="min-h-full bg-gray-50 dark:bg-gray-900 pb-24 relative transition-colors duration-300">
       {/* Header & Search */}
-      <div className="bg-white px-4 pt-8 pb-4 sticky top-0 z-10 shadow-sm">
+      <div className="bg-white dark:bg-gray-800 px-4 pt-8 pb-4 sticky top-0 z-10 shadow-sm transition-colors">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold text-gray-900">Students</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('students')}</h1>
           <button 
             onClick={() => setIsModalOpen(true)}
             className="bg-emerald-500 hover:bg-emerald-600 text-white p-2 rounded-full shadow-md transition-colors"
@@ -85,39 +68,39 @@ const Students: React.FC = () => {
 
         {/* Search Bar */}
         <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 rtl:left-auto rtl:right-3" size={18} />
           <input
             type="text"
-            placeholder="Search students..."
+            placeholder={t('searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-gray-100 text-gray-800 rounded-xl pl-10 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
+            className="w-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white rounded-xl pl-10 pr-4 rtl:pr-10 rtl:pl-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-gray-900 transition-all placeholder-gray-400 dark:placeholder-gray-500"
           />
         </div>
 
         {/* Horizontal Filters */}
-        <div className="flex space-x-2 overflow-x-auto no-scrollbar pb-1">
-          <div className="flex items-center text-gray-400 px-2"><Filter size={16} /></div>
+        <div className="flex space-x-2 rtl:space-x-reverse overflow-x-auto no-scrollbar pb-1">
+          <div className="flex items-center text-gray-400 dark:text-gray-500 px-2"><Filter size={16} /></div>
           
           {/* Rate Filters */}
           <button 
             onClick={() => setMinRateFilter(minRateFilter === 50 ? null : 50)}
             className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${
-              minRateFilter === 50 ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-gray-600 border-gray-200'
+              minRateFilter === 50 ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'
             }`}
           >
-            {'>'} 50 EGP
+            {t('rateFilter50')}
           </button>
           <button 
             onClick={() => setMinRateFilter(minRateFilter === 100 ? null : 100)}
             className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${
-              minRateFilter === 100 ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-gray-600 border-gray-200'
+              minRateFilter === 100 ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'
             }`}
           >
-            {'>'} 100 EGP
+             {t('rateFilter100')}
           </button>
 
-          <div className="w-px h-6 bg-gray-200 mx-1"></div>
+          <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1"></div>
 
           {/* Day Filters (Shortened) */}
           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => {
@@ -128,10 +111,10 @@ const Students: React.FC = () => {
                 key={day}
                 onClick={() => setActiveDayFilter(isActive ? null : fullDay)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${
-                  isActive ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-gray-600 border-gray-200'
+                  isActive ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'
                 }`}
               >
-                {day}
+                {t(day)}
               </button>
              );
           })}
@@ -144,119 +127,47 @@ const Students: React.FC = () => {
           <div 
             key={student.id}
             onClick={() => navigate(`/student/${student.id}`)}
-            className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col cursor-pointer active:scale-[0.99] transition-transform"
+            className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col cursor-pointer active:scale-[0.99] transition-all group"
           >
              <div className="flex justify-between items-start">
                 <div className="flex items-center">
-                   <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mr-3">
-                      <User size={20} />
+                   <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500 mr-3 rtl:mr-0 rtl:ml-3 overflow-hidden">
+                      {student.image_url ? (
+                        <img src={student.image_url} alt={student.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <User size={20} />
+                      )}
                    </div>
                    <div>
-                      <h3 className="font-bold text-gray-900">{student.name}</h3>
-                      <p className="text-xs text-gray-500">{student.days_of_week.join(', ')}</p>
+                      <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{student.name}</h3>
+                      <div className="flex gap-1 mt-1">
+                        {student.days_of_week.map(d => (
+                          <span key={d} className="text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded">{t(d.slice(0,3))}</span>
+                        ))}
+                      </div>
                    </div>
                 </div>
                 <div className="flex flex-col items-end">
-                  <span className="text-sm font-bold text-emerald-600">{student.hourly_rate} EGP</span>
-                  {student.start_time && <span className="text-xs text-gray-400 mt-1">{student.start_time}</span>}
+                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{student.hourly_rate.toLocaleString('en-US')} {t('egp')}</span>
+                  {student.start_time && <span className="text-xs text-gray-400 dark:text-gray-500 mt-1">{formatTime(student.start_time)}</span>}
                 </div>
              </div>
           </div>
         ))}
         {filteredStudents.length === 0 && (
-          <p className="text-center text-gray-400 mt-10 text-sm">No students found.</p>
+          <p className="text-center text-gray-400 dark:text-gray-500 mt-10 text-sm">{t('noStudentsFound')}</p>
         )}
       </div>
 
       {/* Add Student Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-[slideUp_0.3s_ease-out] max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Add New Student</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                <X size={24} />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Full Name</label>
-                <input
-                  autoFocus
-                  type="text"
-                  className="w-full border border-gray-200 rounded-xl p-3 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                  placeholder="e.g. John Doe"
-                  value={formData.name}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Hourly Rate (EGP)</label>
-                <input
-                  type="number"
-                  className="w-full border border-gray-200 rounded-xl p-3 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                  placeholder="0.00"
-                  value={formData.hourly_rate}
-                  onChange={e => setFormData({...formData, hourly_rate: parseFloat(e.target.value) || 0})}
-                />
-              </div>
-
-              <div className="flex gap-4">
-                 <div className="flex-1">
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Start Time</label>
-                    <input
-                      type="time"
-                      className="w-full border border-gray-200 rounded-xl p-3 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                      value={formData.start_time || ''}
-                      onChange={e => setFormData({...formData, start_time: e.target.value})}
-                    />
-                 </div>
-                 <div className="flex-1">
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">End Time</label>
-                    <input
-                      type="time"
-                      className="w-full border border-gray-200 rounded-xl p-3 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                      value={formData.end_time || ''}
-                      onChange={e => setFormData({...formData, end_time: e.target.value})}
-                    />
-                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Schedule Days</label>
-                <div className="flex flex-wrap gap-2">
-                  {DAYS_OF_WEEK.map(day => {
-                    const isSelected = formData.days_of_week.includes(day);
-                    return (
-                      <button
-                        key={day}
-                        type="button"
-                        onClick={() => toggleDaySelection(day)}
-                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-all border ${
-                          isSelected 
-                            ? 'bg-emerald-500 text-white border-emerald-500 shadow-emerald-200 shadow-md' 
-                            : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
-                        }`}
-                      >
-                        {day.slice(0, 3)}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={createMutation.isPending}
-                className="w-full bg-emerald-600 text-white font-bold py-4 rounded-xl mt-4 hover:bg-emerald-700 transition-colors flex justify-center items-center"
-              >
-                {createMutation.isPending ? <Spinner /> : 'Create Student'}
-              </button>
-            </form>
-          </div>
-        </div>
+        <StudentForm
+          title={t('addNewStudent')}
+          submitLabel={t('createStudent')}
+          onSubmit={(data) => createMutation.mutate(data)}
+          onCancel={() => setIsModalOpen(false)}
+          isSubmitting={createMutation.isPending}
+        />
       )}
     </div>
   );

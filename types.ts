@@ -10,7 +10,10 @@ export interface Student {
   last_session_time?: string;
   
   // Financials
-  paid_amount: number; // Amount paid towards the current cycle
+  paid_amount: number; // Amount paid towards the current cycle (resets on week reset)
+  total_collected: number; // Lifetime amount collected from this student
+  outstanding_balance: number; // Debt/Credit carried over from previous weeks
+  last_week_start?: string; // ISO Date of the Saturday the current cycle belongs to
 
   // Attendance columns
   monday_attended: boolean;
@@ -29,6 +32,14 @@ export interface CreateStudentDTO {
   image_url?: string;
   start_time?: string;
   end_time?: string;
+}
+
+export interface PaymentRecord {
+  id: string;
+  student_id: string;
+  amount: number;
+  date: string; // ISO String
+  student_name?: string; // For display convenience
 }
 
 export type DayOfWeek = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';

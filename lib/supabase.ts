@@ -1,13 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-// NOTE: In a real production app, these should be in environment variables (import.meta.env.VITE_...)
-// For this generated example, we check if they exist. If not, the service layer will fall back to mock data.
+// Your Supabase Configuration
+const supabaseUrl = 'https://ytknnqcaoamgrqgruykh.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0a25ucWNhb2FtZ3JxZ3J1eWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3NTcxOTksImV4cCI6MjA3OTMzMzE5OX0.skr9Czydwqim_yJuDXuejL_zcV8mYq3vslBcy437zTI';
 
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
+// Initialize the client
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export const supabase = (supabaseUrl && supabaseAnonKey) 
-  ? createClient(supabaseUrl, supabaseAnonKey) 
-  : null;
-
-export const isSupabaseConfigured = !!supabase;
+// Flag to tell the service layer to use Real Data instead of Mock Data
+export const isSupabaseConfigured = true;
